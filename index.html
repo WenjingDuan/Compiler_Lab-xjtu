@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>编译器实验导航页</title>
+  <style>
+    body { margin: 0; font-family: "Microsoft YaHei", sans-serif; background: #f3f6fb; color: #1f2328; }
+    .wrap { max-width: 1220px; margin: 0 auto; padding: 18px; }
+    h1, h2, h3 { margin: 0 0 10px; }
+    .card { background: #fff; border: 1px solid #d7deea; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    textarea, input[type="text"], input[type="number"], select {
+      width: 100%; border: 1px solid #c7d0df; border-radius: 8px; padding: 8px;
+      box-sizing: border-box; font-family: Consolas, monospace; background: #fbfcff;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    button { border: 1px solid #1f6feb; background: #1f6feb; color: #fff; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+    button.alt { background: #fff; color: #1f6feb; }
+    .small { font-size: 13px; color: #5f6b7a; }
+    .out { white-space: pre-wrap; background: #101827; color: #dce8ff; border-radius: 8px; padding: 10px; min-height: 70px; font-family: Consolas, monospace; }
+    .tips { background: #fff8e1; color: #5f4300; border: 1px solid #edd28a; }
+    .hidden { display: none; }
+    #dfaGraph, #lr0Graph {
+      width: 100%;
+      min-height: 240px;
+      border: 1px solid #d7deea;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 6px;
+      box-sizing: border-box;
+      overflow: auto;
+    }
+    @media (max-width: 920px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section id="navView" class="card">
+      <h1>编译器实验导航页</h1>
+      <p class="small">点击进入某一个实验。后续新增实验时，再添加一个入口和一个页面 section 即可。</p>
+      <div class="grid3">
+        <div class="card">
+          <h2>实验1：DFA</h2>
+          <p class="small">文法/文本输入 -> DFA 输出（五元组 + DOT 图）+ 运行（枚举/判定/最小化）</p>
+          <button data-target="lab1View">进入实验1</button>
+        </div>
+        <div class="card">
+          <h2>实验2：词法分析</h2>
+          <p class="small">输入源码，输出 token 流与词法错误（默认词法 DFA）</p>
+          <button data-target="lab2View">进入实验2</button>
+        </div>
+        <div class="card">
+          <h2>实验3：LR(0)</h2>
+          <p class="small">输入 grammar，判断是否 LR(0)，输出分析结果，并支持状态图渲染</p>
+          <button data-target="lab3View">进入实验3</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="lab1View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">实验1：DFA</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入区</h2>
+        <p class="small">两种输入二选一，若文法输入非空则优先使用文法。</p>
+        <div class="grid2">
+          <div>
+            <h3>文法输入</h3>
+            <div class="row"><input id="lab1GrammarFile" type="file" accept=".txt,.grammar" /></div>
+            <textarea id="lab1GrammarText" placeholder="terminals: ...&#10;nonterminals: ...&#10;start: ...&#10;productions: ...">terminals: a b
+nonterminals: S A
+start: S
+productions:
+S -> aA | b
+A -> aS | ε
+end</textarea>
+          </div>
+          <div>
+            <h3>DFA 输入</h3>
+            <div class="row"><input id="lab1DfaFile" type="file" accept=".txt,.dfa,.cfg" /></div>
+            <textarea id="lab1DfaText" placeholder="alphabet: a b&#10;states: q0 q1&#10;start: q0&#10;accept: ...&#10;transitions: ..."></textarea>
+          </div>
+        </div>
+        <div class="row">
+          <button id="lab1Build">1) 生成/加载 DFA</button>
+          <button id="lab1PutTemplate" class="alt">填充 DFA 模板</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>DFA 输出：五元组 + 状态转换图</h2>
+        <div class="out tips" id="lab1Tips">提示：先点击“1) 生成/加载 DFA”。</div>
+        <div style="height:8px;"></div>
+        <div class="grid2">
+          <div>
+            <h3>五元组</h3>
+            <div class="out" id="lab1TupleOut"></div>
+            <h3 style="margin-top:8px;">DFA 文本（可编辑，修改后重新加载生效）</h3>
+            <textarea id="lab1DfaOutText" style="min-height:180px;"></textarea>
+            <h3 style="margin-top:8px;">DOT 图描述</h3>
+            <div class="out" id="lab1DotOut"></div>
+          </div>
+          <div>
+            <h3>状态转换图</h3>
+            <div id="dfaGraph"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>运行区（基于当前 DFA）</h2>
+        <div class="row">
+          <input id="lab1EnumN" type="number" min="0" value="3" style="max-width:140px;" />
+          <button id="lab1RunEnum" class="alt">2) 枚举语言</button>
+          <input id="lab1TestInput" type="text" placeholder="测试串（空串请留空）" style="max-width:280px;" />
+          <button id="lab1RunTest" class="alt">3) 字符串判定</button>
+          <button id="lab1RunMin" class="alt">4) 最小化</button>
+        </div>
+        <div class="out" id="lab1RunOut"></div>
+      </section>
+    </section>
+
+    <section id="lab2View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">实验2：词法分析</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入区</h2>
+        <p class="small">当前使用内置默认词法规则（默认词法 DFA）。</p>
+        <h3>默认文法/规则示例</h3>
+        <textarea id="lab2DefaultGrammar" readonly style="min-height:140px;">标识符: [A-Za-z_][A-Za-z0-9_]*
+整数: [0-9]+
+浮点数: [0-9]+.[0-9]+([eE][+-]?[0-9]+)?
+关键字: void int float double char if else while for return
+运算符: = == + - * / < <= > >= != && ||
+界符: ; , ( ) { } [ ]</textarea>
+        <div class="row">
+          <input id="lab2SourceFile" type="file" accept=".txt,.c,.cpp,.h" />
+        </div>
+        <textarea id="lab2SourceCode" placeholder="可直接输入代码，或读取文件">void qsort(int low, int high) {
+  int a = 123;
+  float b = 123.45;
+  float c = 1e-3;
+  if (a < b) return;
+}</textarea>
+        <div class="row">
+          <button id="lab2Run">执行词法分析</button>
+        </div>
+        <h3>输出</h3>
+        <div class="out" id="lab2Out"></div>
+      </section>
+    </section>
+
+    <section id="lab3View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">实验3：LR(0) 判定</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入 grammar</h2>
+        <p class="small">支持两种格式：① 第一行是产生式数量 N + 接下来 N 行产生式；② 直接每行一条产生式（自动计数）。</p>
+        <div class="row">
+          <input id="lab3GrammarFile" type="file" accept=".txt,.grammar" />
+          <button id="lab3Run">运行 LR(0) 判定</button>
+          <button id="lab3RenderDot" class="alt">渲染状态图</button>
+        </div>
+        <textarea id="lab3GrammarText">4
+S -> aS
+S -> bA
+A -> cA
+A -> d</textarea>
+      </section>
+
+      <section class="card">
+        <h2>输出</h2>
+        <div class="out tips" id="lab3Tips">提示：先点击“运行 LR(0) 判定”。</div>
+        <div style="height:8px;"></div>
+        <div class="grid2">
+          <div>
+            <h3>lr0_output</h3>
+            <div class="out" id="lab3Out"></div>
+            <h3 style="margin-top:8px;">DOT 图描述</h3>
+            <div class="out" id="lab3DotOut"></div>
+          </div>
+          <div>
+            <h3>状态图</h3>
+            <div id="lr0Graph"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/viz.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/full.render.js"></script>
+  <script>
+    const API_BASE = "";
+    const viz = new Viz();
+
+    function $(id) { return document.getElementById(id); }
+    function showView(viewId) {
+      $("navView").classList.add("hidden");
+      ["lab1View","lab2View","lab3View"].forEach(id => $(id).classList.add("hidden"));
+      $(viewId).classList.remove("hidden");
+    }
+    function backToNav() {
+      $("navView").classList.remove("hidden");
+      ["lab1View","lab2View","lab3View"].forEach(id => $(id).classList.add("hidden"));
+    }
+    document.querySelectorAll("button[data-target]").forEach(btn => btn.addEventListener("click", () => showView(btn.dataset.target)));
+    document.querySelectorAll("button[data-back]").forEach(btn => btn.addEventListener("click", backToNav));
+
+    async function postJson(url, body) {
+      const res = await fetch(API_BASE + url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return await res.json();
+    }
+
+    function readFileTo(fileInput, target) {
+      fileInput.addEventListener("change", async (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        target.value = await f.text();
+      });
+    }
+
+    function showTip(el, msg, isError = false) {
+      const now = new Date().toLocaleTimeString();
+      el.textContent = `[${now}] ${msg}`;
+      el.style.background = isError ? "#ffeaea" : "#fff8e1";
+      el.style.color = isError ? "#7a1313" : "#5f4300";
+      el.style.borderColor = isError ? "#efb0b0" : "#edd28a";
+    }
+
+    async function renderDotTo(dot, graphEl) {
+      graphEl.innerHTML = "";
+      try {
+        const svg = await viz.renderSVGElement(dot);
+        svg.style.width = "100%";
+        svg.style.height = "auto";
+        graphEl.appendChild(svg);
+      } catch (e) {
+        graphEl.textContent = "DOT 渲染失败: " + (e && e.message ? e.message : String(e));
+      }
+    }
+
+    // ===== Lab1: DFA =====
+    const lab1 = {
+      currentDfaText: "",
+      lastDot: "",
+    };
+
+    readFileTo($("lab1GrammarFile"), $("lab1GrammarText"));
+    readFileTo($("lab1DfaFile"), $("lab1DfaText"));
+
+    function dfaTemplateText() {
+      return `alphabet: a b
+states: q0 q1
+start: q0
+accept:
+  q1 ACCEPT
+transitions:
+  q0 a q1
+  q0 b q0
+  q1 a q1
+  q1 b q0
+end`;
+    }
+
+    $("lab1PutTemplate").onclick = () => {
+      $("lab1DfaText").value = dfaTemplateText();
+    };
+
+    async function lab1RefreshViews(payload) {
+      lab1.currentDfaText = payload.dfa_text || "";
+      lab1.lastDot = payload.dot || "";
+      $("lab1DfaOutText").value = payload.dfa_text || "";
+      $("lab1TupleOut").textContent = payload.tuple || "";
+      $("lab1DotOut").textContent = payload.dot || "";
+      await renderDotTo(payload.dot || "", $("dfaGraph"));
+    }
+
+    $("lab1Build").onclick = async () => {
+      const tips = $("lab1Tips");
+      const g = $("lab1GrammarText").value.trim();
+      const d = ($("lab1DfaText").value.trim() || $("lab1DfaOutText").value.trim());
+
+      if (g) {
+        showTip(tips, "正在从文法构造 DFA ...");
+        const r = await postJson("/api/lab1/dfa/from-grammar", { grammar_text: g });
+        if (!r.ok) { $("lab1RunOut").textContent = "文法解析失败:\n" + (r.errors || []).join("\n"); showTip(tips, "文法解析失败。", true); return; }
+        await lab1RefreshViews(r);
+        $("lab1RunOut").textContent = "已由文法构造 DFA，并更新五元组/图/文本。";
+        showTip(tips, "成功：已从文法构造 DFA。");
+        return;
+      }
+
+      if (d) {
+        showTip(tips, "正在加载 DFA 文本 ...");
+        const r = await postJson("/api/lab1/dfa/from-text", { dfa_text: d });
+        if (!r.ok) { $("lab1RunOut").textContent = "DFA 解析失败:\n" + (r.errors || []).join("\n"); showTip(tips, "DFA 解析失败。", true); return; }
+        await lab1RefreshViews(r);
+        $("lab1RunOut").textContent = "已加载 DFA 文本，并更新五元组/图/文本。";
+        showTip(tips, "成功：已加载 DFA 文本。");
+        return;
+      }
+
+      showTip(tips, "请先输入文法或 DFA 文本。", true);
+    };
+
+    $("lab1RunTest").onclick = async () => {
+      const dfaText = $("lab1DfaOutText").value.trim();
+      if (!dfaText) { $("lab1RunOut").textContent = "请先生成/加载 DFA。"; return; }
+      const s = $("lab1TestInput").value;
+      const r = await postJson("/api/lab1/dfa/run", { dfa_text: dfaText, input_str: s });
+      if (!r.ok) { $("lab1RunOut").textContent = "DFA 解析失败:\n" + (r.errors || []).join("\n"); return; }
+      $("lab1RunOut").textContent = r.trace || "";
+    };
+
+    $("lab1RunEnum").onclick = async () => {
+      const dfaText = $("lab1DfaOutText").value.trim();
+      if (!dfaText) { $("lab1RunOut").textContent = "请先生成/加载 DFA。"; return; }
+      const n = Math.max(0, Number($("lab1EnumN").value || 0));
+      const r = await postJson("/api/lab1/dfa/enum", { dfa_text: dfaText, max_len: n });
+      if (!r.ok) { $("lab1RunOut").textContent = "DFA 解析失败:\n" + (r.errors || []).join("\n"); return; }
+      const ans = r.accepted_strings || [];
+      $("lab1RunOut").textContent = `长度不超过 ${n} 的接受串:\n` + (ans.length ? ans.join("\n") : "（无）");
+    };
+
+    $("lab1RunMin").onclick = async () => {
+      const dfaText = $("lab1DfaOutText").value.trim();
+      if (!dfaText) { $("lab1RunOut").textContent = "请先生成/加载 DFA。"; return; }
+      const tips = $("lab1Tips");
+      showTip(tips, "正在最小化 DFA ...");
+      const r = await postJson("/api/lab1/dfa/minimize", { dfa_text: dfaText });
+      if (!r.ok) { $("lab1RunOut").textContent = "DFA 解析失败:\n" + (r.errors || []).join("\n"); showTip(tips, "最小化失败。", true); return; }
+      await lab1RefreshViews(r);
+      $("lab1RunOut").textContent = "最小化完成，已更新 DFA 文本/图。";
+      showTip(tips, "最小化完成。");
+    };
+
+    // ===== Lab2: Lexer =====
+    readFileTo($("lab2SourceFile"), $("lab2SourceCode"));
+
+    $("lab2Run").onclick = async () => {
+      const src = $("lab2SourceCode").value;
+      const r = await postJson("/api/lab2/lex", { mode: "default_lexer", source_code: src });
+      if (!r.ok) { $("lab2Out").textContent = (r.errors || []).join("\n"); return; }
+      const tokens = r.tokens || [];
+      const errors = r.errors || [];
+      $("lab2Out").textContent =
+        "Token 流:\n" + (tokens.length ? tokens.join("\n") : "（无）") +
+        "\n\n词法错误:\n" + (errors.length ? errors.join("\n") : "无");
+    };
+
+    // ===== Lab3: LR0 =====
+    readFileTo($("lab3GrammarFile"), $("lab3GrammarText"));
+    const lab3 = { lastDot: "" };
+    function cleanLr0Output(text) {
+      return (text || "")
+        .split(/\r?\n/)
+        .filter(line =>
+          line.trim() !== "已导出状态图描述文件: lr0_graph.dot" &&
+          line.trim() !== "可用 Graphviz 生成图片，例如: dot -Tpng lr0_graph.dot -o lr0_graph.png"
+        )
+        .join("\n");
+    }
+
+    $("lab3Run").onclick = async () => {
+      const tips = $("lab3Tips");
+      const g = $("lab3GrammarText").value;
+      showTip(tips, "正在运行 LR(0) 判定 ...");
+      const r = await postJson("/api/lab3/lr0", { grammar_text: g });
+      if (!r.ok) {
+        $("lab3Out").textContent = "输入解析失败:\n" + (r.errors || []).join("\n");
+        $("lab3DotOut").textContent = "";
+        $("lr0Graph").innerHTML = "";
+        showTip(tips, "LR(0) 判定失败。", true);
+        return;
+      }
+      $("lab3Out").textContent = cleanLr0Output(r.output_text || "");
+      $("lab3DotOut").textContent = r.dot || "";
+      lab3.lastDot = r.dot || "";
+      showTip(tips, "完成：LR(0)判定结果已生成。");
+    };
+
+    $("lab3RenderDot").onclick = async () => {
+      if (!lab3.lastDot) { $("lr0Graph").textContent = "请先运行 LR(0) 判定以生成 DOT。"; return; }
+      await renderDotTo(lab3.lastDot, $("lr0Graph"));
+    };
+  </script>
+</body>
+</html>
