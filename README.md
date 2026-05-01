@@ -117,7 +117,7 @@ python -m uvicorn server:app --host 127.0.0.1 --port 8000
 
 ## 后续扩展
 
-后续新增实验建议保持同一模式：
+后续新增实验将保持同一模式：
 
 1. `backend/` 新增 `labX_*.py` 模块与 API
 2. `server.py` 挂载对应接口
