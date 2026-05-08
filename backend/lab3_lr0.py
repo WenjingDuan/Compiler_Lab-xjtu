@@ -115,7 +115,8 @@ def _goto(state_items: Set[LR0Item], symbol: str, productions: List[Production],
 def _dot_escape(s: str) -> str:
     out = []
     for c in s:
-        if c in {'\\', '"', "{", "}", "|"}:
+        # Keep backslash sequences (e.g. \n, \l) intact for Graphviz label formatting.
+        if c in {'"', "{", "}", "|"}:
             out.append("\\")
         out.append(c)
     return "".join(out)
@@ -125,8 +126,9 @@ def _export_dot(states: List[State], transitions: Dict[Tuple[int, str], int], pr
     lines: List[str] = []
     lines.append("digraph LR0 {")
     lines.append("  rankdir=LR;")
-    lines.append('  node [shape=box, fontsize=10, fontname="Consolas"];')
-    lines.append('  edge [fontsize=10, fontname="Consolas"];')
+    lines.append("  graph [nodesep=0.8, ranksep=1.0];")
+    lines.append('  node [shape=box, fontsize=22, fontname="Consolas", margin="0.35,0.25"];')
+    lines.append('  edge [fontsize=20, fontname="Consolas"];')
     lines.append("")
     for i, st in enumerate(states):
         label = [f"I{i}\\n"]

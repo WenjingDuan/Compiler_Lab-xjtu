@@ -12,6 +12,7 @@
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     textarea, input[type="text"], input[type="number"], select {
       width: 100%; border: 1px solid #c7d0df; border-radius: 8px; padding: 8px;
       box-sizing: border-box; font-family: Consolas, monospace; background: #fbfcff;
@@ -33,7 +34,8 @@
       box-sizing: border-box;
       overflow: auto;
     }
-    @media (max-width: 920px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .grid4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 920px) { .grid2, .grid3, .grid4 { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -41,7 +43,7 @@
     <section id="navView" class="card">
       <h1>编译器实验导航页</h1>
       <p class="small">点击进入某一个实验。后续新增实验时，再添加一个入口和一个页面 section 即可。</p>
-      <div class="grid3">
+      <div class="grid4">
         <div class="card">
           <h2>实验1：DFA</h2>
           <p class="small">文法/文本输入 -> DFA 输出（五元组 + DOT 图）+ 运行（枚举/判定/最小化）</p>
@@ -56,6 +58,11 @@
           <h2>实验3：LR(0)</h2>
           <p class="small">输入 grammar，判断是否 LR(0)，输出分析结果，并支持状态图渲染</p>
           <button data-target="lab3View">进入实验3</button>
+        </div>
+        <div class="card">
+          <h2>实验4：SLR(1)</h2>
+          <p class="small">在 LR(0) 规范族上自动求 FIRST/FOLLOW，生成 ACTION / GOTO 分析表</p>
+          <button data-target="lab4View">进入实验4</button>
         </div>
       </div>
     </section>
@@ -198,6 +205,32 @@ A -> d</textarea>
         </div>
       </section>
     </section>
+
+    <section id="lab4View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">实验4：SLR(1) 分析表</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入 grammar</h2>
+        <p class="small">格式与实验三相同。FOLLOW 由后端自动计算，输出分为 ACTION 表与 GOTO 表。</p>
+        <div class="row">
+          <input id="lab4GrammarFile" type="file" accept=".txt,.grammar" />
+          <button id="lab4Run">生成 SLR(1) 表</button>
+        </div>
+        <textarea id="lab4GrammarText">2
+S->a S|b A
+A->c A|d</textarea>
+      </section>
+
+      <section class="card">
+        <h2>输出</h2>
+        <div class="out tips" id="lab4Tips">提示：先点击「生成 SLR(1) 表」。</div>
+        <div style="height:8px;"></div>
+        <div class="out" id="lab4Out"></div>
+      </section>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/viz.js"></script>
@@ -209,12 +242,12 @@ A -> d</textarea>
     function $(id) { return document.getElementById(id); }
     function showView(viewId) {
       $("navView").classList.add("hidden");
-      ["lab1View","lab2View","lab3View"].forEach(id => $(id).classList.add("hidden"));
+      ["lab1View","lab2View","lab3View","lab4View"].forEach(id => $(id).classList.add("hidden"));
       $(viewId).classList.remove("hidden");
     }
     function backToNav() {
       $("navView").classList.remove("hidden");
-      ["lab1View","lab2View","lab3View"].forEach(id => $(id).classList.add("hidden"));
+      ["lab1View","lab2View","lab3View","lab4View"].forEach(id => $(id).classList.add("hidden"));
     }
     document.querySelectorAll("button[data-target]").forEach(btn => btn.addEventListener("click", () => showView(btn.dataset.target)));
     document.querySelectorAll("button[data-back]").forEach(btn => btn.addEventListener("click", backToNav));
@@ -399,6 +432,22 @@ end`;
     $("lab3RenderDot").onclick = async () => {
       if (!lab3.lastDot) { $("lr0Graph").textContent = "请先运行 LR(0) 判定以生成 DOT。"; return; }
       await renderDotTo(lab3.lastDot, $("lr0Graph"));
+    };
+
+    // ===== Lab4: SLR(1) =====
+    readFileTo($("lab4GrammarFile"), $("lab4GrammarText"));
+    $("lab4Run").onclick = async () => {
+      const tips = $("lab4Tips");
+      const g = $("lab4GrammarText").value;
+      showTip(tips, "正在生成 SLR(1) 分析表 ...");
+      const r = await postJson("/api/lab4/slr1", { grammar_text: g });
+      if (!r.ok) {
+        $("lab4Out").textContent = "输入解析失败:\n" + (r.errors || []).join("\n");
+        showTip(tips, "SLR(1) 生成失败。", true);
+        return;
+      }
+      $("lab4Out").textContent = r.output_text || "";
+      showTip(tips, "完成：SLR(1) 表已生成。");
     };
   </script>
 </body>

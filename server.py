@@ -18,6 +18,7 @@ from backend.lab1_dfa import (
 )
 from backend.lab2_lexer import LexRequest, lex_run
 from backend.lab3_lr0 import LR0Request, lr0_run
+from backend.lab4_slr1 import SLR1Request, slr1_run
 
 app = FastAPI(title="Compiler Lab Backend", version="1.0.0")
 
@@ -68,6 +69,11 @@ def api_lex(req: LexRequest):
 @app.post("/api/lab3/lr0")
 def api_lr0(req: LR0Request):
     return lr0_run(req)
+
+
+@app.post("/api/lab4/slr1")
+def api_slr1(req: SLR1Request):
+    return slr1_run(req)
 
 
 app.mount("/static", StaticFiles(directory="."), name="static")
