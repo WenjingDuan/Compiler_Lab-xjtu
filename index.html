@@ -24,7 +24,7 @@
     .out { white-space: pre-wrap; background: #101827; color: #dce8ff; border-radius: 8px; padding: 10px; min-height: 70px; font-family: Consolas, monospace; }
     .tips { background: #fff8e1; color: #5f4300; border: 1px solid #edd28a; }
     .hidden { display: none; }
-    #dfaGraph, #lr0Graph, #astGraph, #lab6AstGraph {
+    #dfaGraph, #lr0Graph, #astGraph, #lab6AstGraph, #lab7AstGraph {
       width: 100%;
       min-height: 240px;
       border: 1px solid #d7deea;
@@ -75,6 +75,13 @@
           <h2>实验6：中间代码生成</h2>
           <p class="small">输入源程序：词法 → 语法/语义分析 → 四元式；输出各阶段过程与 SLR 表</p>
           <button data-target="lab6View">进入实验6</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="card">
+          <h2>综合：完整编译与目标代码生成</h2>
+          <p class="small">输入源程序：词法 → 语法/语义 → 四元式 → 内存布局 → MIPS/x86/ARM 汇编</p>
+          <button data-target="lab7View">进入综合实验</button>
         </div>
       </div>
     </section>
@@ -375,6 +382,64 @@ main()</textarea>
         </div>
       </section>
     </section>
+
+    <section id="lab7View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">综合：完整编译与目标代码生成</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入</h2>
+        <p class="small">输入源程序（与实验7命令行一致）。文法使用内置 grammar_input.txt，无需单独输入。</p>
+        <div class="row">
+          <input id="lab7SourceFile" type="file" accept=".src,.txt,.c" />
+        </div>
+        <textarea id="lab7SourceCode" style="min-height:220px;">int main() {
+    int d;
+    d = 5;
+    return d
+};
+main()</textarea>>
+        <div class="row">
+          <button id="lab7Run">运行编译</button>
+          <select id="lab7OutSelect" style="max-width:220px;">
+            <option value="report">汇总报告</option>
+            <option value="lexical_process">词法分析过程</option>
+            <option value="token_stream">Token 流</option>
+            <option value="parse_trace">语法分析过程</option>
+            <option value="quadruples">四元式</option>
+            <option value="memory_layout">内存布局</option>
+            <option value="symbol_table">符号表（含地址）</option>
+            <option value="ast_tree">抽象语法树</option>
+            <option value="semantic_errors">语义错误</option>
+            <option value="target_mips">MIPS 汇编</option>
+            <option value="target_x86">x86 汇编</option>
+            <option value="target_arm">ARM 汇编</option>
+            <option value="slr1_table">SLR(1) 分析表</option>
+            <option value="slr_conflicts">SLR 冲突</option>
+            <option value="ast_dot">AST DOT</option>
+          </select>
+          <button id="lab7RenderAst" class="alt">渲染 AST 图</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>输出</h2>
+        <div class="out tips" id="lab7Tips">提示：先点击「运行编译」。</div>
+        <div style="height:8px;"></div>
+        <div class="grid2">
+          <div>
+            <h3 id="lab7OutTitle">汇总报告</h3>
+            <div class="out" id="lab7Out" style="min-height:280px; max-height:520px; overflow:auto;"></div>
+          </div>
+          <div>
+            <h3>AST 图</h3>
+            <div id="lab7AstGraph"></div>
+          </div>
+        </div>
+      </section>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/viz.js"></script>
@@ -386,12 +451,12 @@ main()</textarea>
     function $(id) { return document.getElementById(id); }
     function showView(viewId) {
       $("navView").classList.add("hidden");
-      ["lab1View","lab2View","lab3View","lab4View","lab5View","lab6View"].forEach(id => $(id).classList.add("hidden"));
+      ["lab1View","lab2View","lab3View","lab4View","lab5View","lab6View","lab7View"].forEach(id => $(id).classList.add("hidden"));
       $(viewId).classList.remove("hidden");
     }
     function backToNav() {
       $("navView").classList.remove("hidden");
-      ["lab1View","lab2View","lab3View","lab4View","lab5View","lab6View"].forEach(id => $(id).classList.add("hidden"));
+      ["lab1View","lab2View","lab3View","lab4View","lab5View","lab6View","lab7View"].forEach(id => $(id).classList.add("hidden"));
     }
     document.querySelectorAll("button[data-target]").forEach(btn => btn.addEventListener("click", () => showView(btn.dataset.target)));
     document.querySelectorAll("button[data-back]").forEach(btn => btn.addEventListener("click", backToNav));
@@ -704,6 +769,66 @@ end`;
         return;
       }
       await renderDotTo(lab6.lastAstDot, $("lab6AstGraph"));
+    };
+
+    // ===== Lab7: Full compile to target assembly =====
+    readFileTo($("lab7SourceFile"), $("lab7SourceCode"));
+    const lab7 = { data: null, lastAstDot: "" };
+    const lab7OutTitles = {
+      report: "汇总报告",
+      lexical_process: "词法分析过程",
+      token_stream: "Token 流",
+      parse_trace: "语法分析过程",
+      quadruples: "四元式",
+      memory_layout: "内存布局",
+      symbol_table: "符号表（含地址）",
+      ast_tree: "抽象语法树",
+      semantic_errors: "语义错误",
+      target_mips: "MIPS 汇编",
+      target_x86: "x86 汇编",
+      target_arm: "ARM 汇编",
+      slr1_table: "SLR(1) 分析表",
+      slr_conflicts: "SLR 冲突",
+      ast_dot: "AST DOT",
+    };
+
+    function lab7ShowPanel(key) {
+      if (!lab7.data) return;
+      const title = lab7OutTitles[key] || key;
+      $("lab7OutTitle").textContent = title;
+      $("lab7Out").textContent = lab7.data[key] || "";
+      if (key === "ast_dot") lab7.lastAstDot = lab7.data.ast_dot || "";
+    }
+
+    $("lab7OutSelect").onchange = () => lab7ShowPanel($("lab7OutSelect").value);
+
+    $("lab7Run").onclick = async () => {
+      const tips = $("lab7Tips");
+      showTip(tips, "正在编译源程序 ...");
+      const r = await postJson("/api/lab7/compile", {
+        source_code: $("lab7SourceCode").value,
+      });
+      if (!r.ok) {
+        $("lab7Out").textContent = (r.errors || []).join("\n");
+        $("lab7AstGraph").innerHTML = "";
+        lab7.data = null;
+        showTip(tips, "编译失败。", true);
+        return;
+      }
+      lab7.data = r;
+      lab7.lastAstDot = r.ast_dot || "";
+      const warn = (r.grammar_warnings || []).length ? "（文法警告见输出）" : "";
+      const okNote = r.success ? "编译完成，已生成四元式与目标汇编。" : "编译完成，存在词法/语义错误或目标代码未生成。";
+      showTip(tips, okNote + warn);
+      lab7ShowPanel($("lab7OutSelect").value);
+    };
+
+    $("lab7RenderAst").onclick = async () => {
+      if (!lab7.lastAstDot) {
+        $("lab7AstGraph").textContent = "请先运行编译以生成 AST DOT。";
+        return;
+      }
+      await renderDotTo(lab7.lastAstDot, $("lab7AstGraph"));
     };
   </script>
 </body>

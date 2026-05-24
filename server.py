@@ -21,6 +21,7 @@ from backend.lab3_lr0 import LR0Request, lr0_run
 from backend.lab4_slr1 import SLR1Request, slr1_run
 from backend.lab5_api import SLR5Request, slr5_run
 from backend.lab6_api import Lab6Request, lab6_compile
+from backend.lab7_api import Lab7Request, lab7_compile
 
 app = FastAPI(title="Compiler Lab Backend", version="1.0.0")
 
@@ -86,6 +87,11 @@ def api_lab5_semantic(req: SLR5Request):
 @app.post("/api/lab6/compile")
 def api_lab6_compile(req: Lab6Request):
     return lab6_compile(req)
+
+
+@app.post("/api/lab7/compile")
+def api_lab7_compile(req: Lab7Request):
+    return lab7_compile(req)
 
 
 app.mount("/static", StaticFiles(directory="."), name="static")
