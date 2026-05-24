@@ -24,7 +24,7 @@
     .out { white-space: pre-wrap; background: #101827; color: #dce8ff; border-radius: 8px; padding: 10px; min-height: 70px; font-family: Consolas, monospace; }
     .tips { background: #fff8e1; color: #5f4300; border: 1px solid #edd28a; }
     .hidden { display: none; }
-    #dfaGraph, #lr0Graph {
+    #dfaGraph, #lr0Graph, #astGraph, #lab6AstGraph {
       width: 100%;
       min-height: 240px;
       border: 1px solid #d7deea;
@@ -43,7 +43,7 @@
     <section id="navView" class="card">
       <h1>编译器实验导航页</h1>
       <p class="small">点击进入某一个实验。后续新增实验时，再添加一个入口和一个页面 section 即可。</p>
-      <div class="grid4">
+      <div class="grid3">
         <div class="card">
           <h2>实验1：DFA</h2>
           <p class="small">文法/文本输入 -> DFA 输出（五元组 + DOT 图）+ 运行（枚举/判定/最小化）</p>
@@ -59,10 +59,22 @@
           <p class="small">输入 grammar，判断是否 LR(0)，输出分析结果，并支持状态图渲染</p>
           <button data-target="lab3View">进入实验3</button>
         </div>
+      </div>
+      <div class="grid3" style="margin-top:10px;">
         <div class="card">
           <h2>实验4：SLR(1)</h2>
           <p class="small">在 LR(0) 规范族上自动求 FIRST/FOLLOW，生成 ACTION / GOTO 分析表</p>
           <button data-target="lab4View">进入实验4</button>
+        </div>
+        <div class="card">
+          <h2>实验5：SLR 语义分析</h2>
+          <p class="small">带 @动作 的文法 + Token 流：SLR 驱动、AST、符号表与语义检查</p>
+          <button data-target="lab5View">进入实验5</button>
+        </div>
+        <div class="card">
+          <h2>实验6：中间代码生成</h2>
+          <p class="small">输入源程序：词法 → 语法/语义分析 → 四元式；输出各阶段过程与 SLR 表</p>
+          <button data-target="lab6View">进入实验6</button>
         </div>
       </div>
     </section>
@@ -231,6 +243,138 @@ A->c A|d</textarea>
         <div class="out" id="lab4Out"></div>
       </section>
     </section>
+
+    <section id="lab5View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">实验5：SLR(1) 语义分析</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入</h2>
+        <p class="small">文法首行为产生式条数；每条产生式右部可带 @动作名。Token 每行格式：<code>&lt;类型, 词素&gt;</code>（与实验二输出一致）。</p>
+        <div class="grid2">
+          <div>
+            <h3>文法（含语义动作）</h3>
+            <div class="row"><input id="lab5GrammarFile" type="file" accept=".txt,.grammar" /></div>
+            <textarea id="lab5GrammarText" style="min-height:220px;">17
+P -> SL @program
+SL -> SL S @append_stmt
+SL -> S @single_stmt
+S -> INT ID SEMI @decl_int
+S -> FLOAT ID SEMI @decl_float
+S -> LBR SL RBR @block
+S -> ID ASSIGN E SEMI @assign
+E -> E PLUS T @bin_plus
+E -> E MINUS T @bin_minus
+E -> T @pass_e
+T -> T MUL F @bin_mul
+T -> T DIV F @bin_div
+T -> F @pass_t
+F -> LPA E RPA @paren
+F -> ID @id_ref
+F -> INT @int_lit
+F -> FLOAT @float_lit</textarea>
+          </div>
+          <div>
+            <h3>Token 流</h3>
+            <div class="row"><input id="lab5TokenFile" type="file" accept=".txt,.tokens" /></div>
+            <textarea id="lab5TokenText" style="min-height:220px;">&lt;INT, int&gt;
+&lt;ID, a&gt;
+&lt;SEMI, ;&gt;
+&lt;ID, a&gt;
+&lt;ASSIGN, =&gt;
+&lt;INT, 3&gt;
+&lt;SEMI, ;&gt;</textarea>
+          </div>
+        </div>
+        <div class="row">
+          <button id="lab5Run">运行语义分析</button>
+          <select id="lab5OutSelect" style="max-width:220px;">
+            <option value="report">汇总报告</option>
+            <option value="ast_tree">抽象语法树</option>
+            <option value="symbol_table">符号表</option>
+            <option value="semantic_errors">语义错误</option>
+            <option value="parse_trace">分析轨迹</option>
+            <option value="slr1_table">SLR(1) 分析表</option>
+            <option value="parallel_stacks">并行栈摘要</option>
+            <option value="token_stream">Token 序列</option>
+            <option value="ast_dot">AST DOT</option>
+          </select>
+          <button id="lab5RenderAst" class="alt">渲染 AST 图</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>输出</h2>
+        <div class="out tips" id="lab5Tips">提示：先点击「运行语义分析」。</div>
+        <div style="height:8px;"></div>
+        <div class="grid2">
+          <div>
+            <h3 id="lab5OutTitle">汇总报告</h3>
+            <div class="out" id="lab5Out" style="min-height:280px; max-height:520px; overflow:auto;"></div>
+          </div>
+          <div>
+            <h3>AST 图</h3>
+            <div id="astGraph"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="lab6View" class="hidden">
+      <div class="row">
+        <button class="alt" data-back>返回导航页</button>
+        <h2 style="margin:0;">实验6：中间代码生成</h2>
+      </div>
+
+      <section class="card">
+        <h2>输入</h2>
+        <p class="small">输入源程序（与实验6命令行一致）。文法使用内置 grammar_input.txt，无需单独输入。</p>
+        <div class="row">
+          <input id="lab6SourceFile" type="file" accept=".src,.txt,.c" />
+        </div>
+        <textarea id="lab6SourceCode" style="min-height:220px;">int main() {
+    int d;
+    d = 5;
+    return d
+};
+main()</textarea>
+        <div class="row">
+          <button id="lab6Run">运行编译</button>
+          <select id="lab6OutSelect" style="max-width:220px;">
+            <option value="report">汇总报告</option>
+            <option value="lexical_process">词法分析过程</option>
+            <option value="token_stream">Token 流</option>
+            <option value="parse_trace">语法分析过程</option>
+            <option value="quadruples">四元式</option>
+            <option value="ast_tree">抽象语法树</option>
+            <option value="symbol_table">符号表</option>
+            <option value="semantic_errors">语义错误</option>
+            <option value="slr1_table">SLR(1) 分析表</option>
+            <option value="slr_conflicts">SLR 冲突</option>
+            <option value="ast_dot">AST DOT</option>
+          </select>
+          <button id="lab6RenderAst" class="alt">渲染 AST 图</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>输出</h2>
+        <div class="out tips" id="lab6Tips">提示：先点击「运行编译」。</div>
+        <div style="height:8px;"></div>
+        <div class="grid2">
+          <div>
+            <h3 id="lab6OutTitle">汇总报告</h3>
+            <div class="out" id="lab6Out" style="min-height:280px; max-height:520px; overflow:auto;"></div>
+          </div>
+          <div>
+            <h3>AST 图</h3>
+            <div id="lab6AstGraph"></div>
+          </div>
+        </div>
+      </section>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/viz.js"></script>
@@ -242,12 +386,12 @@ A->c A|d</textarea>
     function $(id) { return document.getElementById(id); }
     function showView(viewId) {
       $("navView").classList.add("hidden");
-      ["lab1View","lab2View","lab3View","lab4View"].forEach(id => $(id).classList.add("hidden"));
+      ["lab1View","lab2View","lab3View","lab4View","lab5View","lab6View"].forEach(id => $(id).classList.add("hidden"));
       $(viewId).classList.remove("hidden");
     }
     function backToNav() {
       $("navView").classList.remove("hidden");
-      ["lab1View","lab2View","lab3View","lab4View"].forEach(id => $(id).classList.add("hidden"));
+      ["lab1View","lab2View","lab3View","lab4View","lab5View","lab6View"].forEach(id => $(id).classList.add("hidden"));
     }
     document.querySelectorAll("button[data-target]").forEach(btn => btn.addEventListener("click", () => showView(btn.dataset.target)));
     document.querySelectorAll("button[data-back]").forEach(btn => btn.addEventListener("click", backToNav));
@@ -448,6 +592,118 @@ end`;
       }
       $("lab4Out").textContent = r.output_text || "";
       showTip(tips, "完成：SLR(1) 表已生成。");
+    };
+
+    // ===== Lab5: SLR semantic =====
+    readFileTo($("lab5GrammarFile"), $("lab5GrammarText"));
+    readFileTo($("lab5TokenFile"), $("lab5TokenText"));
+    const lab5 = { data: null, lastAstDot: "" };
+    const lab5OutTitles = {
+      report: "汇总报告",
+      ast_tree: "抽象语法树",
+      symbol_table: "符号表",
+      semantic_errors: "语义错误",
+      parse_trace: "分析轨迹",
+      slr1_table: "SLR(1) 分析表",
+      parallel_stacks: "并行栈摘要",
+      token_stream: "Token 序列",
+      ast_dot: "AST DOT",
+    };
+
+    function lab5ShowPanel(key) {
+      if (!lab5.data) return;
+      const title = lab5OutTitles[key] || key;
+      $("lab5OutTitle").textContent = title;
+      $("lab5Out").textContent = lab5.data[key] || "";
+      if (key === "ast_dot") lab5.lastAstDot = lab5.data.ast_dot || "";
+    }
+
+    $("lab5OutSelect").onchange = () => lab5ShowPanel($("lab5OutSelect").value);
+
+    $("lab5Run").onclick = async () => {
+      const tips = $("lab5Tips");
+      showTip(tips, "正在运行 SLR 语义分析 ...");
+      const r = await postJson("/api/lab5/semantic", {
+        grammar_text: $("lab5GrammarText").value,
+        token_text: $("lab5TokenText").value,
+      });
+      if (!r.ok) {
+        $("lab5Out").textContent = (r.errors || []).join("\n");
+        $("astGraph").innerHTML = "";
+        lab5.data = null;
+        showTip(tips, "语义分析失败。", true);
+        return;
+      }
+      lab5.data = r;
+      lab5.lastAstDot = r.ast_dot || "";
+      const warn = (r.warnings || []).length ? "\n（文法警告见输出）" : "";
+      const okNote = r.success ? "分析完成，未发现语义错误。" : "分析完成，存在语义/语法错误或 AST 未生成。";
+      showTip(tips, okNote + warn);
+      lab5ShowPanel($("lab5OutSelect").value);
+    };
+
+    $("lab5RenderAst").onclick = async () => {
+      if (!lab5.lastAstDot) {
+        $("astGraph").textContent = "请先运行语义分析以生成 AST DOT。";
+        return;
+      }
+      await renderDotTo(lab5.lastAstDot, $("astGraph"));
+    };
+
+    // ===== Lab6: Compile to quadruples =====
+    readFileTo($("lab6SourceFile"), $("lab6SourceCode"));
+    const lab6 = { data: null, lastAstDot: "" };
+    const lab6OutTitles = {
+      report: "汇总报告",
+      lexical_process: "词法分析过程",
+      token_stream: "Token 流",
+      parse_trace: "语法分析过程",
+      quadruples: "四元式",
+      ast_tree: "抽象语法树",
+      symbol_table: "符号表",
+      semantic_errors: "语义错误",
+      slr1_table: "SLR(1) 分析表",
+      slr_conflicts: "SLR 冲突",
+      ast_dot: "AST DOT",
+    };
+
+    function lab6ShowPanel(key) {
+      if (!lab6.data) return;
+      const title = lab6OutTitles[key] || key;
+      $("lab6OutTitle").textContent = title;
+      $("lab6Out").textContent = lab6.data[key] || "";
+      if (key === "ast_dot") lab6.lastAstDot = lab6.data.ast_dot || "";
+    }
+
+    $("lab6OutSelect").onchange = () => lab6ShowPanel($("lab6OutSelect").value);
+
+    $("lab6Run").onclick = async () => {
+      const tips = $("lab6Tips");
+      showTip(tips, "正在编译源程序 ...");
+      const r = await postJson("/api/lab6/compile", {
+        source_code: $("lab6SourceCode").value,
+      });
+      if (!r.ok) {
+        $("lab6Out").textContent = (r.errors || []).join("\n");
+        $("lab6AstGraph").innerHTML = "";
+        lab6.data = null;
+        showTip(tips, "编译失败。", true);
+        return;
+      }
+      lab6.data = r;
+      lab6.lastAstDot = r.ast_dot || "";
+      const warn = (r.grammar_warnings || []).length ? "（文法警告见输出）" : "";
+      const okNote = r.success ? "编译完成，已生成四元式。" : "编译完成，存在词法/语义错误或 AST 未生成。";
+      showTip(tips, okNote + warn);
+      lab6ShowPanel($("lab6OutSelect").value);
+    };
+
+    $("lab6RenderAst").onclick = async () => {
+      if (!lab6.lastAstDot) {
+        $("lab6AstGraph").textContent = "请先运行编译以生成 AST DOT。";
+        return;
+      }
+      await renderDotTo(lab6.lastAstDot, $("lab6AstGraph"));
     };
   </script>
 </body>
